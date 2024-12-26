@@ -32,6 +32,14 @@
 *.app
 
 .vs/*
-x64
-*.vcxproj*
+x64/
 *.sln
+*.user
+*.suo
+*.vcxproj.user
+
+!*.sln
+!*.csproj
+!*.vcxproj
+!*.proj
+!*.props
