@@ -15,6 +15,15 @@ enum class Piece {
     None
 };
 
+const std::unordered_map<Piece, int> PIECE_VALUES = {
+    {Piece::Pawn, 100},
+    {Piece::Bishop, 300},
+    {Piece::Knight, 300},
+    {Piece::Rook, 500},
+    {Piece::Queen, 900},
+    {Piece::King, 10000}
+};
+
 struct Move {
     bitboard from;
     bitboard to;
@@ -23,6 +32,13 @@ struct Move {
 
     bool isCapture;
     Piece capturedPiece;
+
+    int getScore() {
+        if (isCapture) {
+            return PIECE_VALUES.at(capturedPiece) - (PIECE_VALUES.at(capturedPiece) / 10);
+        }
+        return 0;
+    }
 };
 
 class Board;

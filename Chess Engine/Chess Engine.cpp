@@ -68,7 +68,7 @@ int main()
 	/*b.makeMove(b.getMoves(true)[0]);
 	std::cout << b.print_board();*/
 	
-	Engine engine(b, 6);
+	Engine engine(b, 4);
 
 	std::cout << "getting..." << "\n\n";
 	Move best = engine.getBestMove();

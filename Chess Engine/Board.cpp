@@ -3,6 +3,7 @@
 #include <cmath>
 #include <iostream>
 #include <sstream>
+#include <algorithm>
 
 Board::Board(std::string fen)
 	: whiteTurn(true)
@@ -299,6 +300,10 @@ void Board::undoMove(Move move) {
 	setAttacking();
 }
 
+bool compareMoves(Move& a, Move& b) {
+	return a.getScore() > b.getScore();
+}
+
 vector<Move> Board::getMoves(bool white) {
 	vector<Move> moves = {};
 
@@ -333,6 +338,8 @@ vector<Move> Board::getMoves(bool white) {
 				current ^= lsb;
 			}
 		}
+
+		std::sort(moves.begin(), moves.end(), compareMoves);
 		return moves;
 	}
 
