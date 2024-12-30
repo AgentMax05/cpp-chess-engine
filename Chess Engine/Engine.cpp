@@ -1,9 +1,12 @@
 #include "Engine.hpp"
 #include <iostream>
 
+std::vector<Engine::TTEntry> Engine::transpositionTable;
+
 Engine::Engine(Board& b, int depth)
 	: board(b), searchDepth(depth)
 {
+	transpositionTable.resize(TRANSPOSITION_TABLE_SIZE);
 }
 
 Move Engine::getBestMove() {
@@ -44,61 +47,66 @@ Move Engine::getBestMove() {
 }
 
 double Engine::minimax(Board& board, int depth, double alpha, double beta) {
+    uint64_t posKey = board.getZobristKey();
+    TTEntry& entry = transpositionTable[posKey & (TRANSPOSITION_TABLE_SIZE - 1)];
+
+    if (entry.zobristKey == posKey && entry.depth >= depth) {
+        // Position found in table with sufficient depth
+        if (entry.flag == TTFlag::EXACT) return entry.score;
+        if (entry.flag == TTFlag::LOWERBOUND) alpha = std::max(alpha, entry.score);
+        if (entry.flag == TTFlag::UPPERBOUND) beta = std::min(beta, entry.score);
+        if (alpha >= beta) return entry.score;
+    }
+
     if (board.kingInCheck(!board.getPlayer())) {
-		if (board.getPlayer()) {
-			return alpha;
-		}
-		else {
-			return beta;
-		}
-	}
+        if (board.getPlayer()) {
+            return alpha;
+        }
+        else {
+            return beta;
+        }
+    }
 
-	if (depth <= 0) {
-		return evalBoard(board);
-	}
+    if (depth <= 0) {
+        return evalBoard(board);
+    }
 
-	vector<Move> moves = board.getMoves(board.getPlayer());
-	
-	if (board.getPlayer()) {
-		double highest = -DBL_MAX;
+    vector<Move> moves = board.getMoves(board.getPlayer());
 
-		for (int i = 0; i < moves.size(); i++) {
-			board.makeMove(moves[i]);
-			double score = minimax(board, depth - 1, alpha, beta);
-            board.undoMove(moves[i]);
+    double originalAlpha = alpha;
+    double bestScore = board.getPlayer() ? -DBL_MAX : DBL_MAX;
 
-			if (score > highest) {
-				highest = score;
-			}
-			if (score > alpha) {
-				alpha = score;
-			}
-			if (beta <= alpha) {
-				return highest;
-			}
-		}
-		return highest;
-	}
-	else {
-		double lowest = DBL_MAX;
+    for (const Move& move : moves) {
+        board.makeMove(move);
+        double score = minimax(board, depth - 1, alpha, beta);
+        board.undoMove(move);
 
-		for (int i = 0; i < moves.size(); i++) {
-			board.makeMove(moves[i]);
-			double score = minimax(board, depth - 1, alpha, beta);
-            board.undoMove(moves[i]);
+        if (board.getPlayer()) {
+            bestScore = std::max(bestScore, score);
+            alpha = std::max(alpha, score);
+        }
+        else {
+            bestScore = std::min(bestScore, score);
+            beta = std::min(beta, score);
+        }
 
-			if (score < lowest) {
-				lowest = score;
-			}
-			if (score < beta) {
-				beta = score;
-			}
-			if (beta <= alpha) {
-				return lowest;
-			}
-		}
-		return lowest;
-	}
+        if (beta <= alpha) break;
+    }
+
+    TTFlag flag;
+    if (bestScore <= originalAlpha) {
+        flag = TTFlag::UPPERBOUND;
+    }
+    else if (bestScore >= beta) {
+        flag = TTFlag::LOWERBOUND;
+    }
+    else {
+        flag = TTFlag::EXACT;
+    }
+
+    entry = { posKey, bestScore, depth, flag };
+
+    return bestScore;
 }
 
 double Engine::evalBoard(Board& board) {

@@ -29,6 +29,7 @@ void Storage::init() {
 	generateMoves();
 	generateShifts();
 	initDB();
+	Board::initZobrist();
 	std::cout << "Database initialization finished.\n";
 }
 

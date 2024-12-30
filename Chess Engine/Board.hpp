@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <random>
 
 using std::vector;
 
@@ -60,9 +61,20 @@ private:
 	int numMoves;
 	void setAttacking();
 	void setTotalBoards();
+
+	static uint64_t zobristTable[12][64];
+	static uint64_t zobristCastle[4];
+	static uint64_t zobristEnPassant[8];
+	static uint64_t zobristSideToMove;
+	
+	uint64_t zobristHash;
+
+	int pieceToIndex(Piece p);
 public:
 	Board(std::string fen);
 	//Board(const Board& other);
+
+	static void initZobrist();
 
 	std::string print_board();
 
@@ -74,8 +86,13 @@ public:
 	bool kingInCheck(bool white);
 
 	inline bool getPlayer() { return whiteTurn; }
-	inline void togglePlayer() { whiteTurn = !whiteTurn; }
+	inline void togglePlayer() { 
+		whiteTurn = !whiteTurn; 
+		zobristHash ^= zobristSideToMove;
+	}
 	
+	uint64_t getZobristKey();
+	uint64_t setZobristKey();
 
 	// static helpers
 

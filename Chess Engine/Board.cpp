@@ -5,6 +5,11 @@
 #include <sstream>
 #include <algorithm>
 
+uint64_t Board::zobristTable[12][64];
+uint64_t Board::zobristCastle[4];
+uint64_t Board::zobristEnPassant[8];
+uint64_t Board::zobristSideToMove;
+
 Board::Board(std::string fen)
 	: whiteTurn(true)
 {
@@ -20,7 +25,7 @@ Board::Board(std::string fen)
 			col = 0;
 		}
 		else if (isdigit(c)) {
-			int num = isdigit(c);
+			int num = c - '0';
 			col += num;
 		}
 		else {
@@ -57,6 +62,7 @@ Board::Board(std::string fen)
 
 	setTotalBoards();
 	setAttacking();
+	setZobristKey();
 }
 
 //Board::Board(const Board& other)
@@ -248,25 +254,52 @@ void Board::setTotalBoards() {
 	}
 }
 
+int Board::pieceToIndex(Piece p) {
+	switch (p) {
+		case Piece::Pawn:
+			return 0;
+		case Piece::Bishop:
+			return 1;
+		case Piece::Knight:
+			return 2;
+		case Piece::Rook:
+			return 3;
+		case Piece::King:
+			return 4;
+		case Piece::Queen:
+			return 5;
+		default:
+			return -1;
+	}
+}
+
 void Board::makeMove(Move move) {
 	if (move.white) {
 		allWhite ^= (move.from | move.to);
 		*(wBitboardLookup[move.piece]) ^= (move.from | move.to);
 
+		zobristHash ^= zobristTable[pieceToIndex(move.piece)][Storage::bitboardToSqIndex(move.from)];
+		zobristHash ^= zobristTable[pieceToIndex(move.piece)][Storage::bitboardToSqIndex(move.to)];
+
 		if (move.isCapture) {
 			allBlack &= ~move.to;
 
 			*(bBitboardLookup[move.capturedPiece]) ^= move.to;
+			zobristHash ^= zobristTable[pieceToIndex(move.capturedPiece) + 6][Storage::bitboardToSqIndex(move.to)];
 		}
 	}
 	else {
 		allBlack ^= (move.from | move.to);
 		*(bBitboardLookup[move.piece]) ^= (move.from | move.to);
 
+		zobristHash ^= zobristTable[pieceToIndex(move.piece) + 6][Storage::bitboardToSqIndex(move.from)];
+		zobristHash ^= zobristTable[pieceToIndex(move.piece) + 6][Storage::bitboardToSqIndex(move.to)];
+
 		if (move.isCapture) {
 			allWhite &= ~move.to;
 
 			*(wBitboardLookup[move.capturedPiece]) ^= move.to;
+			zobristHash ^= zobristTable[pieceToIndex(move.capturedPiece)][Storage::bitboardToSqIndex(move.to)];
 		}
 	}
 
@@ -279,20 +312,28 @@ void Board::undoMove(Move move) {
 		allWhite ^= (move.from | move.to);
 		*(wBitboardLookup[move.piece]) ^= (move.from | move.to);
 
+		zobristHash ^= zobristTable[pieceToIndex(move.piece)][Storage::bitboardToSqIndex(move.from)];
+		zobristHash ^= zobristTable[pieceToIndex(move.piece)][Storage::bitboardToSqIndex(move.to)];
+
 		if (move.isCapture) {
 			allBlack |= move.to;
 
 			*(bBitboardLookup[move.capturedPiece]) |= move.to;
+			zobristHash ^= zobristTable[pieceToIndex(move.capturedPiece) + 6][Storage::bitboardToSqIndex(move.to)];
 		}
 	}
 	else {
 		allBlack ^= (move.from | move.to);
 		*(bBitboardLookup[move.piece]) ^= (move.from | move.to);
 
+		zobristHash ^= zobristTable[pieceToIndex(move.piece) + 6][Storage::bitboardToSqIndex(move.from)];
+		zobristHash ^= zobristTable[pieceToIndex(move.piece) + 6][Storage::bitboardToSqIndex(move.to)];
+
 		if (move.isCapture) {
 			allWhite |= move.to;
 
 			*(wBitboardLookup[move.capturedPiece]) |= move.to;
+			zobristHash ^= zobristTable[pieceToIndex(move.capturedPiece)][Storage::bitboardToSqIndex(move.to)];
 		}
 	}
 
@@ -390,3 +431,58 @@ const std::unordered_map<Piece, std::string> Board::pieceToString = {
 	{ Piece::Queen, "Queen" },
 	{ Piece::King, "King "}
 };
+
+void Board::initZobrist() {
+	std::random_device rd;
+	std::mt19937_64 eng(rd());
+	std::uniform_int_distribution<uint64_t> distr;
+
+	for (int i = 0; i < 12; i++) {
+		for (int j = 0; j < 64; j++) {
+			zobristTable[i][j] = distr(eng);
+		}
+	}
+
+	for (int i = 0; i < 16; i++) {
+		zobristCastle[i] = distr(eng);
+	}
+
+	for (int file = 0; file < 8; file++) {
+		zobristEnPassant[file] = distr(eng);
+	}
+
+	zobristSideToMove = distr(eng);
+}
+
+uint64_t Board::setZobristKey() {
+	uint64_t key = 0;
+
+	for (int i = 0; i < whiteBitboards.size(); i++) {
+		bitboard current = *whiteBitboards[i];
+		while (current) {
+			bitboard lsb = Storage::getLSB(current);
+			int sqIndex = Storage::bitboardToSqIndex(lsb);
+			key ^= zobristTable[i][sqIndex];
+			current ^= lsb;
+		}
+		current = *blackBitboards[i];
+		while (current) {
+			bitboard lsb = Storage::getLSB(current);
+			int sqIndex = Storage::bitboardToSqIndex(lsb);
+			key ^= zobristTable[i + 6][sqIndex];
+			current ^= lsb;
+		}
+	}
+
+	if (!getPlayer()) {
+		key ^= zobristSideToMove;
+	}
+
+	zobristHash = key;
+
+	return key;
+}
+
+uint64_t Board::getZobristKey() {
+	return zobristHash;
+}
