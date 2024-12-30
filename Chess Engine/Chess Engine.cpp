@@ -10,7 +10,7 @@ int main()
 	Storage::init();
 	Board b("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR");
 	
-	Engine engine(b, 6);
+	Engine engine(b, 4);
 
 	std::cout << "getting..." << "\n\n";
 	auto start = std::chrono::high_resolution_clock::now();

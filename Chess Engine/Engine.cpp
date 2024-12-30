@@ -76,18 +76,41 @@ double Engine::minimax(Board& board, int depth, double alpha, double beta) {
     double originalAlpha = alpha;
     double bestScore = board.getPlayer() ? -DBL_MAX : DBL_MAX;
 
+    bool firstMove = true;
+
     for (const Move& move : moves) {
         board.makeMove(move);
-        double score = minimax(board, depth - 1, alpha, beta);
+
+        double score;
+
+        if (firstMove) {
+            score = minimax(board, depth - 1, alpha, beta);
+            firstMove = false;
+        }
+        else {
+            if (board.getPlayer()) {
+                score = minimax(board, depth - 1, alpha, alpha + 1);
+                if (score > alpha && score < beta) {
+                    score = minimax(board, depth - 1, alpha, beta);
+                }
+            }
+            else {
+                score = minimax(board, depth - 1, beta - 1, beta);
+                if (score < beta && score > alpha) {
+                    score = minimax(board, depth - 1, alpha, beta);
+                }
+            }
+        }
+
         board.undoMove(move);
 
         if (board.getPlayer()) {
             bestScore = std::max(bestScore, score);
-            alpha = std::max(alpha, score);
+            alpha = std::max(alpha, bestScore);
         }
         else {
             bestScore = std::min(bestScore, score);
-            beta = std::min(beta, score);
+            beta = std::min(beta, bestScore);
         }
 
         if (beta <= alpha) break;

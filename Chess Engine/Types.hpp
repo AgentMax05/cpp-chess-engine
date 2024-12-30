@@ -7,22 +7,15 @@
 typedef uint64_t bitboard;
 enum class Piece {
     Pawn,
-    Rook,
-    Knight,
     Bishop,
-    Queen,
+    Knight,
+    Rook,
     King,
+    Queen,
     None
 };
 
-const std::unordered_map<Piece, int> PIECE_VALUES = {
-    {Piece::Pawn, 100},
-    {Piece::Bishop, 300},
-    {Piece::Knight, 300},
-    {Piece::Rook, 500},
-    {Piece::Queen, 900},
-    {Piece::King, 10000}
-};
+const int PIECE_VALUES[7] = { 10, 30, 30, 50, 1000, 90, 0 };
 
 struct Move {
     bitboard from;
@@ -35,7 +28,7 @@ struct Move {
 
     int getScore() {
         if (isCapture) {
-            return PIECE_VALUES.at(capturedPiece) - (PIECE_VALUES.at(capturedPiece) / 10);
+            return PIECE_VALUES[static_cast<int>(capturedPiece)] - (PIECE_VALUES[static_cast<int>(piece)] / 10);
         }
         return 0;
     }

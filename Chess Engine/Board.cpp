@@ -110,14 +110,6 @@ Board::Board(std::string fen)
 //	};
 //}
 
-bitboard Board::getBitboard(int row, int col) {
-	return 1ULL << (((7 - row) * 8) + (7 - col));
-}
-
-bitboard Board::getBitboard(int sqIndex) {
-	return 1ULL << (63 - sqIndex);
-}
-
 std::string Board::print_bitboard(bitboard bmap) {
 	std::string result = "";
 	for (int row = 0; row < 8; row++) {
@@ -255,22 +247,7 @@ void Board::setTotalBoards() {
 }
 
 int Board::pieceToIndex(Piece p) {
-	switch (p) {
-		case Piece::Pawn:
-			return 0;
-		case Piece::Bishop:
-			return 1;
-		case Piece::Knight:
-			return 2;
-		case Piece::Rook:
-			return 3;
-		case Piece::King:
-			return 4;
-		case Piece::Queen:
-			return 5;
-		default:
-			return -1;
-	}
+	return static_cast<int>(p);
 }
 
 void Board::makeMove(Move move) {
@@ -372,18 +349,22 @@ vector<Move> Board::getMoves(bool white) {
 						}
 					}
 
-					moves.push_back({ lsb, mlsb, pieceMap[i], true, (mlsb & allBlack) != 0, capture });
+					Move newMove = { lsb, mlsb, pieceMap[i], true, (mlsb & allBlack) != 0, capture };
+					
+					// check if move puts king in check
+					//makeMove(newMove);
+					//if (!kingInCheck(true)) {
+					moves.push_back(newMove);
+					//}
+					//undoMove(newMove);
+
 					moveboard ^= mlsb;
 				}
 
 				current ^= lsb;
 			}
 		}
-
-		std::sort(moves.begin(), moves.end(), compareMoves);
-		return moves;
 	}
-
 	else {
 		for (int i = 0; i < pieceMap.size(); i++) {
 			bitboard current = *(blackBitboards[i]);
@@ -408,29 +389,29 @@ vector<Move> Board::getMoves(bool white) {
 						}
 					}
 
-					moves.push_back({ lsb, mlsb, pieceMap[i], false, (mlsb & allWhite) != 0, capture });
+					Move newMove = { lsb, mlsb, pieceMap[i], false, (mlsb & allWhite) != 0, capture };
+					
+					// check if move puts king in check
+					//makeMove(newMove);
+					//if (!kingInCheck(false)) {
+					moves.push_back(newMove);
+					//}
+					//undoMove(newMove);
+
 					moveboard ^= mlsb;
 				}
 
 				current ^= lsb;
 			}
 		}
-		return moves;
 	}
+	std::sort(moves.begin(), moves.end(), compareMoves);
+	return moves;
 }
 
 bool Board::kingInCheck(bool white) {
 	return (white ? wKing & attackingB : bKing & attackingW) != 0;
 }
-
-const std::unordered_map<Piece, std::string> Board::pieceToString = {
-	{ Piece::Pawn, "Pawn" },
-	{ Piece::Rook, "Rook" },
-	{ Piece::Knight, "Knight" },
-	{ Piece::Bishop, "Bishop" },
-	{ Piece::Queen, "Queen" },
-	{ Piece::King, "King "}
-};
 
 void Board::initZobrist() {
 	std::random_device rd;

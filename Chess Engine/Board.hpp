@@ -96,8 +96,13 @@ public:
 
 	// static helpers
 
-	static bitboard getBitboard(int row, int col);
-	static bitboard getBitboard(int sqIndex);
+	static inline bitboard getBitboard(int row, int col) {
+		return 1ULL << (((7 - row) * 8) + (7 - col));
+	}
+
+	static inline bitboard getBitboard(int sqIndex) {
+		return 1ULL << (63 - sqIndex);
+	}
 
 	static std::string print_bitboard(bitboard b);
 	static int getSquareIndex(int row, int col);
@@ -105,8 +110,6 @@ public:
 	static bitboard stringToBitboard(std::string s);
 	
 	static bool oneAtBitboard(int row, int col, bitboard b);
-
-	static const std::unordered_map<Piece, std::string> pieceToString;
 
 	inline bitboard getAllBlack() const { return allBlack; }
 	inline bitboard getAllWhite() const { return allWhite; }
